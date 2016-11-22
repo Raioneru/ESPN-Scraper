@@ -13,6 +13,7 @@ password= '*******'
 
 #What team to scrape
 team ='chi'
+teams = ['CLE', 'ATL', 'CHI', 'CHA', 'TOR', 'BOS', 'IND', 'NY', 'MIL', 'ORL', 'DET', 'MIA', 'WSH', 'BKN', 'PHI', 'LAC', 'GS', 'SA', 'MEM', 'HOU', 'OKC', 'POR', 'LAL', 'UTAH', 'DEN', 'SAC', 'MIN', 'NO', 'PHX', 'DAL']
 
 #initialize variables
 global numGames
@@ -23,7 +24,7 @@ game_id2 = 1
 
 def dbase_init(newScrape):
 	# database connection
-	conn = pymysql.connect(host='localhost', port=3306, user=username, passwd=password, db='bulls')
+	conn = pymysql.connect(host='localhost', port=3306, user=username, passwd=password, db='NBA')
 	Cursor = conn.cursor()
 
 
@@ -51,11 +52,20 @@ def scrape(Cursor):
 
 	#Store all player IDs
 	playerIDs = dict()
+
+	print("What team would you like to import data for?")
+
+	for fav in range(len(teams)):
+		print(fav+1,'.',teams[fav])
+	chooseFave = input()
+
 	
 
 	#Scrape IDs and names from roster
-	Roster = urlopen("http://www.espn.com/nba/team/roster/_/name/"+team)
+	Roster = urlopen("http://www.espn.com/nba/team/roster/_/name/"+teams[int(chooseFave)-1])
 	RosterObj = BeautifulSoup(Roster.read(), "html.parser")
+
+	print("Scraping for ", teams[int(chooseFave)-1])
 
 	#find number of games
 	record = (RosterObj.findAll("div", {'class':'sub-title'}))
@@ -120,9 +130,6 @@ def scrape(Cursor):
 		
 		# iterate over nba teams
 		for opponentID in range(1,31):
-			# all but chicago bulls
-			if (opponentID == 4):
-				continue
 			else:
 				opponentID = str(opponentID)
 				EvenOpponentTuple = (playerStatsObj.findAll("tr", {"class":"evenrow team-46-"+opponentID}))
@@ -229,9 +236,17 @@ def query_interface (Cursor, conn):
 	c = True
 	# iterate until correct table name is specified
 	while c == True:
-		print("Tables: Player, Data, Games")
-		print()
-		table = input("What table would you like to query? ")
+		print("What table would you like to query?")
+		print ("1. Player")
+		print("2. Data")
+		print("3. Games")
+		choice = input("Enter a Choice: ")
+		
+		if (choice == "1"):table='player'
+		if (choice == "2"):table='data'
+		if (choice == "3"):table='games'
+
+
 		print("Thanks!")
 		print()
 
