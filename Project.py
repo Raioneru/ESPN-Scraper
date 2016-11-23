@@ -1,7 +1,6 @@
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 import pymysql
-from prettytable import PrettyTable
 
 #Dates of preseason games in order to avoid scraping
 preseason =["Sat 10/1","Sun 10/2","Mon 10/3","Tue 10/4","Wed 10/5","Thu 10/6","Fri 10/7","Sat 10/8","Sun 10/9",
@@ -251,7 +250,7 @@ def query_interface (Cursor, conn):
 		print()
 
 		if (table.lower() == "player"):
-			print("Table", table.capitalize(), "has: id_pk, first, last, position, number, age, height, weight, and salary for each player")
+			print("Table", table.capitalize(), "has: id_pk , first , last ,and age for each player")
 			print()
 			# user inputs what columns they'd like to see
 			select = input("What would you like to select(use commas to separate values)? ")
@@ -259,14 +258,14 @@ def query_interface (Cursor, conn):
 			print(select)
 			c = False
 		elif (table.lower() == "data"):
-			print("Table", table.capitalize(), "has: id_pk, game_fk, player_fk, minutes, fg_made, fg_attempted, three_made, three_attempted, free_made, free_attempted, rebounds, assists, blocks, steals, fouls, turnovers, points for each Player in each Game played")
+			print("Table", table.capitalize(), "has: outcome, id_pk , game_fk , player_fk , minutes  , fg_made , fg_attempted , three_made , three_attempted , free_made , free_attempted , rebounds , assists , blocks , steals , fouls , turnovers ,  points for each Player in each Game played")
 			print()
 			select = input("What would you like to select(use commas to separate values)? ")
 			select2 = select.split(",")
 			print(select)
 			c = False
 		elif (table.lower() == "games"):
-			print("Table", table.capitalize(), "has: game_pk, opponent_fk, date, final_score, opp_points, outcome for each game")
+			print("Table", table.capitalize(), "has: outcome, id_pk , opponent_fk , date , and score for each game")
 			print()
 			select = input("What would you like to select(use commas to separate values)? ")
 			select2 = select.split(",")
@@ -293,6 +292,7 @@ def query_interface (Cursor, conn):
 		print("What would you like to group by?")
 		print()
 		groupAns = input("GROUP BY: ")
+
 		print()
 
 
@@ -314,39 +314,32 @@ def query_interface (Cursor, conn):
 	print()
 	statement = input("(yes/no): ")
 	print()
-
-	#if height in select replace with custom join of height_ft and height_in
-	if select.find('height') !=-1:
-		print('Height replace')
-		select = select.replace("height","CONCAT(height_ft,'ft  ',height_in,'in') AS height")
-
-
-	#sql query construction and output
+	# sql query construction and output
 	if (statement.lower() == "yes"):
 		if whereQ.lower() == "yes":
-			#Use where and groupby
 			if groupQ.lower()=="yes":
-				hfg = Cursor.execute('SELECT %s FROM %s WHERE %s GROUP BY %s' % (select, table, whre, groupAns))
-			#Use Where
+				hfg = Cursor.execute('SELECT "%s" FROM "%s" WHERE "%s" GROUP BY "%s"' % (select, table, whre, groupAns))
 			else:
-				hfg = Cursor.execute('SELECT %s FROM %s WHERE %s' % (select, table, whre))
+				hfg = Cursor.execute('SELECT "%s" FROM "%s" WHERE "%s"' % (select, table, whre))
 		else:
-			#Use groupby
 			if groupQ.lower()=="yes":
-				hfg = Cursor.execute('SELECT %s FROM %s GROUP BY %s' % (select, table, groupAns))
-			#No filter
+				hfg = Cursor.execute('SELECT "%s" FROM "%s" GROUP BY "%s"' % (select, table, groupAns))
 			else:
-				hfg = Cursor.execute('SELECT %s FROM %s' % (select, table))
+				hfg = Cursor.execute('SELECT "%s" FROM "%s"' % (select, table))
 			
 		p = Cursor.fetchall()
-		assert(len(p) > 0)
 		print()
 
-		x = PrettyTable(select2)
-		x.align='l'
+		
+		for x in select2:
+			print(x[:4],end="\t")
+	
+		print()
 		for row in p:
-			x.add_row(row)
-		print(x)
+			for y in row:
+				print(y,end="\t")
+			print()
+
 	print()
 	print()
 	query_interface(Cursor, conn)
@@ -365,14 +358,13 @@ def main():
 		scrape(Cursor)
 	else:
 		Cursor, conn = dbase_init(newScrape)
-	
 	stop = query_interface(Cursor, conn)
 	if stop == True:
-		# close database connection
-		Cursor.close()
-		conn.commit()
-		conn.close()
+		return
 
-	
+	# close database connection
+	Cursor.close()
+	conn.commit()
+	conn.close()
 
 main()
