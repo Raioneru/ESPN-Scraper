@@ -9,12 +9,10 @@ preseason =["Sat 10/1","Sun 10/2","Mon 10/3","Tue 10/4","Wed 10/5","Thu 10/6","F
 
 #insert MySQL login info
 username= 'root'
-password= '********'
+password= '******'
 
 #What team to scrape
-team ='chi'
-teams = ['CLE', 'ATL', 'CHI', 'CHA', 'TOR', 'BOS', 'IND', 'NY', 'MIL', 'ORL', 'DET', 'MIA', 'WSH', 'BKN', 'PHI', 'LAC', 'GS', 'SA', 'MEM', 'HOU', 'OKC', 'POR', 'LAL', 'UTAH', 'DEN', 'SAC', 'MIN', 'NO', 'PHX', 'DAL']
-
+teams = ['ATL', 'BKN', 'BOS', 'CHA', 'CHI', 'CLE', 'DAL', 'DEN', 'DET', 'GS', 'HOU', 'IND', 'LAC', 'LAL', 'MEM', 'MIA', 'MIL', 'MIN', 'NO', 'NY', 'OKC', 'ORL', 'PHI', 'PHX', 'POR', 'SA', 'SAC', 'TOR', 'UTAH', 'WSH']
 #initialize variables
 global numGames
 numGames = 0
@@ -53,19 +51,26 @@ def scrape(Cursor):
 	#Store all player IDs
 	playerIDs = dict()
 
-	print("What team would you like to import data for?")
+	
 
 	for fav in range(len(teams)):
-		print(fav+1,'.',teams[fav])
-	chooseFave = input()
+		print(fav+1,'-',teams[fav])
+
+	AskForTeam = True
+	while AskForTeam == True:
+		chooseFav = input(("What team would you like to import data for?: "))
+		if (int(chooseFav) <= 0) or (int(chooseFav) > len(teams)):
+						print("Sorry", chooseFav, "is not a valid team")
+						continue
+		AskForTeam= False
 
 	
 
 	#Scrape IDs and names from roster
-	Roster = urlopen("http://www.espn.com/nba/team/roster/_/name/"+teams[int(chooseFave)-1])
+	Roster = urlopen("http://www.espn.com/nba/team/roster/_/name/"+teams[int(chooseFav)-1])
 	RosterObj = BeautifulSoup(Roster.read(), "html.parser")
 
-	print("Scraping for ", teams[int(chooseFave)-1])
+	print("Scraping for ", teams[int(chooseFav)-1])
 
 	#find number of games
 	record = (RosterObj.findAll("div", {'class':'sub-title'}))
@@ -130,6 +135,9 @@ def scrape(Cursor):
 		
 		# iterate over nba teams
 		for opponentID in range(1,31):
+			#Team cant play itself so dont look for data
+			if opponentID==chooseFav:
+				continue
 			else:
 				opponentID = str(opponentID)
 				EvenOpponentTuple = (playerStatsObj.findAll("tr", {"class":"evenrow team-46-"+opponentID}))
@@ -211,8 +219,9 @@ def scrape(Cursor):
 							if game_id2 == numGames+1:
 								game_id2= 1
 
-		#print(man, "Done")
+		
 	print("Done!")
+	print()
 
 def query_interface (Cursor, conn):
 	select=''
@@ -240,51 +249,117 @@ def query_interface (Cursor, conn):
 		print ("1. Player")
 		print("2. Data")
 		print("3. Games")
+		
 		choice = input("Enter a Choice: ")
 		
 		if (choice == "1"):table='player'
-		if (choice == "2"):table='data'
-		if (choice == "3"):table='games'
+		elif (choice == "2"):table='data'
+		elif (choice == "3"):table='games'
 
+		else:
+			print("Sorry", choice,"is not a valid Table")
+			print()
+			continue
 
 		print("Thanks!")
 		print()
-
+		
+		#initialize select variables
+		select=','
+		select2=[]
+		
 		if (table== "player"):
 			#columns in player table
 			playerColumns=['id_pk', 'first', 'last','position','number','age','height','weight','salary']
-			select=','
-			print("Table", table.capitalize(), "has: ")
+
+			print(table.capitalize(),"table has: ")
 			#print columns in player table
 			for col in range(len(playerColumns)):
-				print(col+1,': ',playerColumns[col])
-			Col_choice = input("Enter columns to query using commas to separate each: ")
-			col_list = Col_choice.split(',')
+				print(str(col+1)+'. ',playerColumns[col])
+			
+			keep_going=True
+			while keep_going:
+				Col_choice = input("Enter columns to query using commas to separate each: ")
+				col_list = Col_choice.split(',')
+				keep_going=False
+
+				#check that all inputs are valid
+				for check in col_list:
+					if (int(check) <= 0) or (int(check) > len(playerColumns)):
+						print("Sorry", check, "is not a valid column")
+						keep_going=True
+
+
 			
 			for ch in col_list:
-				select2.append(playerColumns[ch-1])
+				select2.append(playerColumns[int(ch)-1])
 
 			select = select.join(select2)	
 			print()
 			print(select)
 			c = False
-		elif (table.lower() == "data"):
-			print("Table", table.capitalize(), "has: id_pk, game_fk, player_fk, minutes, fg_made, fg_attempted, three_made, three_attempted, free_made, free_attempted, rebounds, assists, blocks, steals, fouls, turnovers, points for each Player in each Game played")
+
+
+		elif (table== "data"):
+			#columns in data table
+			dataColumns=['id_pk', 'game_fk', 'player_fk', 'minutes', 'fg_made', 'fg_attempted', 'three_made', 'three_attempted', 'free_made', 'free_attempted', 'rebounds', 'assists', 'blocks', 'steals', 'fouls', 'turnovers', 'points']
+
+			print(table.capitalize(),"table has: ")
+			#print columns in data table
+			for col in range(len(dataColumns)):
+				print(str(col+1)+'. ',dataColumns[col])
+			
+
+			keep_going=True
+			while keep_going:
+				Col_choice = input("Enter columns to query using commas to separate each: ")
+				col_list = Col_choice.split(',')
+				keep_going=False
+
+				#check that all inputs are valid
+				for check in col_list:
+					if (int(check) <= 0) or (int(check) > len(dataColumns)):
+						print("Sorry", check, "is not a valid column")
+						keep_going=True
+			
+			for ch in col_list:
+				select2.append(dataColumns[int(ch)-1])
+
+			select = select.join(select2)	
 			print()
-			select = input("What would you like to select(use commas to separate values)? ")
-			select2 = select.split(",")
 			print(select)
 			c = False
-		elif (table.lower() == "games"):
-			print("Table", table.capitalize(), "has: game_pk, opponent_fk, date, final_score, opp_points, outcome for each game")
+
+
+
+		elif (table == "games"):
+			#columns in games table
+			gamesColumns=['game_pk', 'opponent_fk', 'date', 'final_score', 'opp_points', 'outcome']
+			print(table.capitalize(),"table has: ")
+			#print columns in games table
+			for col in range(len(gamesColumns)):
+				print(str(col+1)+'. ',gamesColumns[col])
+			
+			keep_going=True
+			while keep_going:
+				Col_choice = input("Enter columns to query using commas to separate each: ")
+				col_list = Col_choice.split(',')
+				keep_going=False
+
+				#check that all inputs are valid
+				for check in col_list:
+					if (int(check) <= 0) or (int(check) > len(gamesColumns)):
+						print("Sorry", check, "is not a valid column")
+						keep_going=True
+			
+			for ch in col_list:
+				select2.append(gamesColumns[int(ch)-1])
+
+			select = select.join(select2)	
 			print()
-			select = input("What would you like to select(use commas to separate values)? ")
-			select2 = select.split(",")
 			print(select)
 			c = False
-		else:
-			print("Seems like your spelling may be incorrect, lets try again.")
-			c = True
+		
 	print()
 	# user input WHERE clause
 	whereQ = input("Want to use filter out data(yes/no) ")
@@ -363,12 +438,7 @@ def query_interface (Cursor, conn):
 
 
 def main():
-	print("Starting to scrape...")
-	print('...')
-
-	
-
-	newScrape = input("Do you want to scrape new data?(yes/no) ")
+	newScrape = input("Do you want to scrape new data for a new Team?(yes/no) ")
 
 	if newScrape.lower() == "yes":
 		Cursor, conn = dbase_init(newScrape)
@@ -382,7 +452,5 @@ def main():
 		Cursor.close()
 		conn.commit()
 		conn.close()
-
-	
 
 main()
