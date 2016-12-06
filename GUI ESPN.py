@@ -1,14 +1,17 @@
 import tkinter 
 import tkinter.messagebox
+from tkinter import ttk
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 import pymysql
+import time
+
 
 
 
 #insert MySQL login info
 username= 'root'
-password= '******'
+password= '*******'
 
 conn = pymysql.connect(host='localhost', port=3306, user=username, passwd=password, db='NBA')
 Cursor = conn.cursor()
@@ -58,6 +61,11 @@ def MyGUI():
 	tkinter.mainloop()
 """
 
+#Dates of preseason games in order to avoid scraping
+preseason =["Sat 10/1","Sun 10/2","Mon 10/3","Tue 10/4","Wed 10/5","Thu 10/6","Fri 10/7","Sat 10/8","Sun 10/9",
+	"Mon 10/10","Tue 10/11","Wed 10/12","Thu 10/13","Fri 10/14","Sat 10/15","Sun 10/16","Mon 10/17","Tue 10/18","Wed 10/19","Thu 10/20","Fri 10/21","Sat 10/22","Sun 10/23","Mon 10/24"]
+#What team to scrape
+teams = ['ATL', 'BKN', 'BOS', 'CHA', 'CHI', 'CLE', 'DAL', 'DEN', 'DET', 'GS', 'HOU', 'IND', 'LAC', 'LAL', 'MEM', 'MIA', 'MIL', 'MIN', 'NO', 'NY', 'OKC','ORL', 'PHI', 'PHX', 'POR', 'SA', 'SAC', 'TOR', 'UTAH', 'WSH']
 
 			
 
@@ -65,6 +73,8 @@ def MyGUI():
 
 class MyGUI:
 	def __init__(self):
+		
+
 		#create the main window widget
 		self.main_window = tkinter.Tk()
 		self.main_window.geometry("500x500")
@@ -84,13 +94,11 @@ class MyGUI:
 		self.ScrapeQuestion.pack(side='top')
 
 
-		self.NoButton = tkinter.Button(self.bottom_frame, text='No', command=self.query_interface)
+		self.NoButton = tkinter.Button(self.bottom_frame, text='No', command=self.pickTable)
 		self.YesButton = tkinter.Button(self.bottom_frame, text='Yes', command=self.dbase_init)
 		
 		self.NoButton.pack(side='left')
 		self.YesButton.pack(side='left')
-
-		
 
 		#pack the frames
 		self.top_frameL.pack()
@@ -100,9 +108,10 @@ class MyGUI:
 		tkinter.mainloop()
 
 	def dbase_init(self):
-		print('Init')
-		assert(len(self.teams)!=0)
-
+		print('dbase_init')
+	
+		assert(len(teams)!=0)
+		
 		Cursor.execute("DROP TABLE IF EXISTS Data")
 		Cursor.execute("create table Data (id_pk INT not null, game_fk INT, player_fk INT, minutes INT, fg_made INT, fg_attempted INT, three_made INT, three_attempted INT, free_made INT, free_attempted INT, rebounds INT, assists INT, blocks INT, steals INT, fouls INT, turnovers INT, points INT, PRIMARY KEY (id_pk))")
 		
@@ -124,15 +133,18 @@ class MyGUI:
 		self.radio_var = tkinter.IntVar()
 		self.radio_var.set(1)
 
-		for RadioTeam in range(len(self.teams)):
+		for RadioTeam in range(len(teams)):
 			if RadioTeam<15:
-				self.teams[RadioTeam] = tkinter.Radiobutton(self.top_frameL, text=self.teams[RadioTeam], variable=self.radio_var, value=RadioTeam,borderwidth=1).grid(row=RadioTeam,column=0)
+				tkinter.Radiobutton(self.top_frameL, text=teams[RadioTeam], variable=self.radio_var, value=RadioTeam,borderwidth=1).grid(row=RadioTeam,column=0)
 			else:
-				self.teams[RadioTeam] = tkinter.Radiobutton(self.top_frameR, text=self.teams[RadioTeam], variable=self.radio_var, value=RadioTeam,borderwidth=1).grid(row=RadioTeam-15,column=1)
+				tkinter.Radiobutton(self.top_frameR, text=teams[RadioTeam], variable=self.radio_var, value=RadioTeam,borderwidth=1).grid(row=RadioTeam-15,column=1)
 
 		#Create button widgets in bottom frame
-		self.QuitButton = tkinter.Button(self.bottom_frame, text='Quit', command=self.main_window.destroy).grid(row=1, column=0)
-		self.NextButton = tkinter.Button(self.bottom_frame, text='Next', command=self.scrape).grid(row=1, column=1)
+		self.QuitButton = tkinter.Button(self.bottom_frame, text='Quit', command=self.main_window.destroy)
+		self.NextButton = tkinter.Button(self.bottom_frame, text='Next', command=self.BeforeScrape)
+
+		self.QuitButton.pack()
+		self.NextButton.pack()
 
 		#repack frames
 		self.top_frameL.pack(side='left')
@@ -141,6 +153,7 @@ class MyGUI:
 
 
 	def query_interface(self):
+
 		select=''
 		table='' 
 		whre='' 
@@ -353,6 +366,50 @@ class MyGUI:
 		print()
 		query_interface(Cursor, conn)
 
+	def pickTable(self):
+
+		#if using old table
+		try:
+			#Destroy all Init widgets
+			self.LastTeamLabel.destroy()
+			self.ScrapeQuestion.destroy()
+			self.NoButton.destroy()
+			self.YesButton.destroy()
+		except AttributeError:
+			print('messed up')
+			
+		else:
+			#Destroy scrape widgets
+			pass
+			
+		
+		#Create New Widgets is Which table to query?
+		self.radio_varTABLE = tkinter.IntVar()
+		self.radio_varTABLE.set(1)
+
+		PlayerRadio= tkinter.Radiobutton(self.top_frameL, text='Player',variable=self.radio_varTABLE, value=1,borderwidth=1)
+		DataRadio= tkinter.Radiobutton(self.top_frameL, text='Data',variable=self.radio_varTABLE, value=2,borderwidth=1)
+		GamesRadio= tkinter.Radiobutton(self.top_frameL, text='Games',variable=self.radio_varTABLE, value=3,borderwidth=1)
+
+		#pack radio buttons
+		PlayerRadio.pack()
+		DataRadio.pack()
+		GamesRadio.pack()
+
+
+		#Create button widgets in bottom frame
+		self.QuitButton = tkinter.Button(self.bottom_frame, text='Quit', command=self.main_window.destroy)
+		self.NextButton = tkinter.Button(self.bottom_frame, text='Next', command=self.query_interface)
+
+		self.QuitButton.pack()
+		self.NextButton.pack()
+
+		#repack frames
+		self.top_frameL.pack(side='left')
+		#self.top_frameR.pack(side='right')
+		self.bottom_frame.pack(side='left')
+
+
 	def scrape(self):
 		global numGames
 		global game_id
@@ -364,16 +421,15 @@ class MyGUI:
 		#returns radio_vars IntVar data as an int
 		chooseFav = self.radio_var.get()
 		assert(type(chooseFav) == int)
-		assert(len(self.teams !=0))
+		assert(len(teams) !=0)
 
+		
 		#Store all player IDs
 		playerIDs = dict()
 
 		#Scrape IDs and names from roster
-		Roster = urlopen("http://www.espn.com/nba/team/roster/_/name/"+self.teams[chooseFav-1])
+		Roster = urlopen("http://www.espn.com/nba/team/roster/_/name/"+teams[chooseFav])
 		RosterObj = BeautifulSoup(Roster.read(), "html.parser")
-
-		print("Scraping for ", self.teams[chooseFav-1])
 
 		#find number of games
 		record = (RosterObj.findAll("div", {'class':'sub-title'}))
@@ -429,6 +485,7 @@ class MyGUI:
 
 		#for each player on the roster
 		for key, man in playerIDs.items():
+						
 			if man== 'R.J. Hunter' or man=='Jerian Grant':
 				continue
 
@@ -519,14 +576,48 @@ class MyGUI:
 								data_id+=1
 								game_id2+=1
 
+
+
 								if game_id2 == numGames+1:
 									game_id2= 1
 
 			
 		print("Done!")
 		print()
+		self.progress.stop()
+		#Destroy all previous widgets
+		self.progress.destroy()
+		self.pickTable()
+
+	def BeforeScrape(self):
+		#Destroy all previous widgets
+		self.top_frameL.destroy()
+		self.top_frameR.destroy()
+
+		self.top_frameL = tkinter.Frame(self.main_window)
+		self.top_frameR = tkinter.Frame(self.main_window)
+
+		#grid.destroy()
+		self.QuitButton.destroy()
+		self.NextButton.destroy()
+
+		#create new widgets
+		self.progress = ttk.Progressbar(self.top_frameL, orient='horizontal', mode='indeterminate')
+
+		#pack the widget
+		self.progress.pack(expand=True, fill=tkinter.BOTH, side=tkinter.TOP)
+
+		#pack the frame
+		self.top_frameL.pack()
+
+		self.main_window.after(3000,self.scrape)
+		self.progress.start(50)
 
 	
+
+	
+
+		
 
 
 mygui= MyGUI()
