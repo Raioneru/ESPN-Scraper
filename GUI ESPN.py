@@ -11,7 +11,7 @@ import time
 
 #insert MySQL login info
 username= 'root'
-password= '*******'
+password= '*******
 
 conn = pymysql.connect(host='localhost', port=3306, user=username, passwd=password, db='NBA')
 Cursor = conn.cursor()
@@ -26,40 +26,6 @@ game_id2 = 1
 last_teamFile= open('team.txt', 'r')
 last_team = last_teamFile.read()
 
-"""
-def MyGUI():
-	#Initialize connection
-	#create the main window widget
-	main_window = tkinter.Tk()
-
-	#Create two frames, one for the top of the window and one for the bottom
-	top_frame = tkinter.Frame(main_window)
-	bottom_frame = tkinter.Frame(main_window)
-
-	#Create a label widget containing the last team scrapped in the top frame
-	LastTeamLabel = tkinter.Label(top_frame, text='Last team scraped was: '+last_team)
-	ScrapeQuestion= tkinter.Label(top_frame, text='Do you want to perform a new scrape?')
-
-	#pack the frames
-	LastTeamLabel.pack(side='top')
-	ScrapeQuestion.pack(side='top')
-
-
-	NoButton = tkinter.Button(bottom_frame, text='No', command=query_interface)
-	YesButton = tkinter.Button(bottom_frame, text='Yes', command=dbase_init)
-	
-	NoButton.pack(side='left')
-	YesButton.pack(side='left')
-
-	
-
-	#pack the frames
-	top_frame.pack()
-	bottom_frame.pack()
-
-	#Enter the tkinter main loop
-	tkinter.mainloop()
-"""
 
 #Dates of preseason games in order to avoid scraping
 preseason =["Sat 10/1","Sun 10/2","Mon 10/3","Tue 10/4","Wed 10/5","Thu 10/6","Fri 10/7","Sat 10/8","Sun 10/9",
@@ -154,146 +120,147 @@ class MyGUI:
 
 	def query_interface(self):
 
+		#destroy describetable widgets
+		try:
+			self.TableColumns.destroy()
+			self.TableColumns2.destroy()
+
+		except AttributeError:
+			pass
+		
+		self.PlayerRadio.destroy()
+		self.DataRadio.destroy()
+		self.GamesRadio.destroy()
+		self.NextButton.destroy()
+
+
+		#returns radio_vars IntVar data as an int
+		tableChoice = self.radio_varTABLE.get()
+		assert(type(tableChoice) == int)
+		print(tableChoice)
+
 		select=''
 		table='' 
 		whre='' 
 		groupAns=''
-		# custom query interface
-		start = input("Ready to start querying?(yes/no) ")
+	
+		if (tableChoice== 1):
+			#columns in player table
+			playerColumns=['id_pk', 'first', 'last','position','number','age','height','weight','salary']
+			playerColumnsVAR=[0]*len(playerColumns)
+			playerColumnsWidget=[0]*len(playerColumns)
 
-		if start.lower() != "yes":
-			print("BYE!")
-			Cursor.close()
-			conn.commit()
-			conn.close()
-			stop = True
-			return stop
+			for playerIndex in range(len(playerColumns)):
+				print(playerColumns[playerIndex])
+				#Create IntVar objects for each column
+				playerColumnsVAR[playerIndex]= tkinter.IntVar()
 
-		print("GREAT!")
-		print()
+				#set the intvar objects to 0
+				playerColumnsVAR[playerIndex].set(0)
 
-		c = True
-		# iterate until correct table name is specified
-		while c == True:
-			print("What table would you like to query?")
-			print ("1. Player")
-			print("2. Data")
-			print("3. Games")
+				#Create the checkbutton widgets
+				playerColumnsWidget[playerIndex] = tkinter.Checkbutton(self.top_frameL, text = playerColumns[playerIndex], variable =playerColumns[playerIndex])
+
+				playerColumnsWidget[playerIndex].pack()
+			self.top_frameL.pack()
+
+
+
 			
-			choice = input("Enter a Choice: ")
+
+			print(table.capitalize(),"table has: ")
+			#print columns in player table
+			for col in range(len(playerColumns)):
+				print(str(col+1)+'. ',playerColumns[col])
 			
-			if (choice == "1"):table='player'
-			elif (choice == "2"):table='data'
-			elif (choice == "3"):table='games'
+			keep_going=True
+			while keep_going:
+				Col_choice = input("Enter columns to query using commas to separate each: ")
+				col_list = Col_choice.split(',')
+				keep_going=False
 
-			else:
-				print("Sorry", choice,"is not a valid Table")
-				print()
-				continue
+				#check that all inputs are valid
+				for check in col_list:
+					if (int(check) <= 0) or (int(check) > len(playerColumns)):
+						print("Sorry", check, "is not a valid column")
+						keep_going=True
 
-			print("Thanks!")
+
+			
+			for ch in col_list:
+				select2.append(playerColumns[int(ch)-1])
+
+			select = select.join(select2)	
 			print()
+			print(select)
+			c = False
+
+
+		elif (tableChoice== 2):
+			#columns in data table
+			dataColumns=['id_pk', 'game_fk', 'player_fk', 'minutes', 'fg_made', 'fg_attempted', 'three_made', 'three_attempted', 'free_made', 'free_attempted', 'rebounds', 'assists', 'blocks', 'steals', 'fouls', 'turnovers', 'points']
+
+			print(table.capitalize(),"table has: ")
+			#print columns in data table
+			for col in range(len(dataColumns)):
+				print(str(col+1)+'. ',dataColumns[col])
 			
-			#initialize select variables
-			select=','
-			select2=[]
+
+			keep_going=True
+			while keep_going:
+				Col_choice = input("Enter columns to query using commas to separate each: ")
+				col_list = Col_choice.split(',')
+				keep_going=False
+
+				#check that all inputs are valid
+				for check in col_list:
+					if (int(check) <= 0) or (int(check) > len(dataColumns)):
+						print("Sorry", check, "is not a valid column")
+						keep_going=True
 			
-			if (table== "player"):
-				#columns in player table
-				playerColumns=['id_pk', 'first', 'last','position','number','age','height','weight','salary']
+			for ch in col_list:
+				select2.append(dataColumns[int(ch)-1])
 
-				print(table.capitalize(),"table has: ")
-				#print columns in player table
-				for col in range(len(playerColumns)):
-					print(str(col+1)+'. ',playerColumns[col])
-				
-				keep_going=True
-				while keep_going:
-					Col_choice = input("Enter columns to query using commas to separate each: ")
-					col_list = Col_choice.split(',')
-					keep_going=False
-
-					#check that all inputs are valid
-					for check in col_list:
-						if (int(check) <= 0) or (int(check) > len(playerColumns)):
-							print("Sorry", check, "is not a valid column")
-							keep_going=True
-
-
-				
-				for ch in col_list:
-					select2.append(playerColumns[int(ch)-1])
-
-				select = select.join(select2)	
-				print()
-				print(select)
-				c = False
-
-
-			elif (table== "data"):
-				#columns in data table
-				dataColumns=['id_pk', 'game_fk', 'player_fk', 'minutes', 'fg_made', 'fg_attempted', 'three_made', 'three_attempted', 'free_made', 'free_attempted', 'rebounds', 'assists', 'blocks', 'steals', 'fouls', 'turnovers', 'points']
-
-				print(table.capitalize(),"table has: ")
-				#print columns in data table
-				for col in range(len(dataColumns)):
-					print(str(col+1)+'. ',dataColumns[col])
-				
-
-				keep_going=True
-				while keep_going:
-					Col_choice = input("Enter columns to query using commas to separate each: ")
-					col_list = Col_choice.split(',')
-					keep_going=False
-
-					#check that all inputs are valid
-					for check in col_list:
-						if (int(check) <= 0) or (int(check) > len(dataColumns)):
-							print("Sorry", check, "is not a valid column")
-							keep_going=True
-				
-				for ch in col_list:
-					select2.append(dataColumns[int(ch)-1])
-
-				select = select.join(select2)	
-				print()
-				print(select)
-				c = False
+			select = select.join(select2)	
+			print()
+			print(select)
+			c = False
 
 
 
-			elif (table == "games"):
-				#columns in games table
-				gamesColumns=['game_pk', 'opponent_fk', 'date', 'final_score', 'opp_points', 'outcome']
-				print(table.capitalize(),"table has: ")
-				#print columns in games table
-				for col in range(len(gamesColumns)):
-					print(str(col+1)+'. ',gamesColumns[col])
-				
-				keep_going=True
-				while keep_going:
-					Col_choice = input("Enter columns to query using commas to separate each: ")
-					col_list = Col_choice.split(',')
-					keep_going=False
-
-					#check that all inputs are valid
-					for check in col_list:
-						if (int(check) <= 0) or (int(check) > len(gamesColumns)):
-							print("Sorry", check, "is not a valid column")
-							keep_going=True
-				
-				for ch in col_list:
-					select2.append(gamesColumns[int(ch)-1])
-
-				select = select.join(select2)	
-				print()
-				print(select)
-				c = False
+		elif (tableChoice == 3):
+			#columns in games table
+			gamesColumns=['game_pk', 'opponent_fk', 'date', 'final_score', 'opp_points', 'outcome']
+			print(table.capitalize(),"table has: ")
+			#print columns in games table
+			for col in range(len(gamesColumns)):
+				print(str(col+1)+'. ',gamesColumns[col])
 			
+			keep_going=True
+			while keep_going:
+				Col_choice = input("Enter columns to query using commas to separate each: ")
+				col_list = Col_choice.split(',')
+				keep_going=False
+
+				#check that all inputs are valid
+				for check in col_list:
+					if (int(check) <= 0) or (int(check) > len(gamesColumns)):
+						print("Sorry", check, "is not a valid column")
+						keep_going=True
+			
+			for ch in col_list:
+				select2.append(gamesColumns[int(ch)-1])
+
+			select = select.join(select2)	
+			print()
+			print(select)
+			c = False
+		
 		print()
 		# user input WHERE clause
-		whereQ = input("Want to use filter out data(yes/no) ")
+		#whereQ = input("Want to use filter out data(yes/no) ")
 		print()
+		"""
 		if whereQ.lower() == "yes":
 			print("What conditions would you like to add(ex first = 'jimmy', age >= 20)?")
 			print()
@@ -302,7 +269,7 @@ class MyGUI:
 			print()
 
 		#ask user groupBy
-		groupQ = input("Want to use group by?: (yes/no) ")
+		#groupQ = input("Want to use group by?: (yes/no) ")
 		print()
 		if groupQ.lower() == "yes":
 			print("What would you like to group by?")
@@ -327,7 +294,7 @@ class MyGUI:
 			else:
 				print("SELECT", select, "FROM",table)
 		print()
-		statement = input("(yes/no): ")
+		#statement = input("(yes/no): ")
 		print()
 
 		#if height in select replace with custom join of height_ft and height_in
@@ -365,7 +332,64 @@ class MyGUI:
 		print()
 		print()
 		query_interface(Cursor, conn)
+		"""
 
+	def DescribeTable(self):
+		try:
+			self.TableColumns.destroy()
+			self.TableColumns2.destroy()
+		except Exception:
+			pass
+
+		if self.radio_varTABLE.get() == 1:
+			self.TableColumns= tkinter.Label(self.top_frameR, text='Data table columns:')
+			self.TableColumns2= tkinter.Label(self.top_frameR, text="""
+				id_pk 
+				first 
+				last 
+				position 
+				number 
+				age 
+				height 
+				weight 
+				salary""")
+
+		elif self.radio_varTABLE.get() == 2:
+			self.TableColumns= tkinter.Label(self.top_frameR, text='Player table columns:')
+			self.TableColumns2= tkinter.Label(self.top_frameR, text="""
+				id_pk
+				game_fk
+				player_fk
+				minutes
+				fg_made
+				fg_attempted
+				three_made
+				three_attempted
+				free_made
+				free_attempted
+				rebounds
+				assists
+				blocks
+				steals
+				fouls
+				turnovers
+				points""")
+
+		elif self.radio_varTABLE.get() == 3:
+			self.TableColumns= tkinter.Label(self.top_frameR, text='Games table columns:')
+			self.TableColumns2= tkinter.Label(self.top_frameR, text="""
+				game_pk
+				opponent_fk
+				date
+				final_score
+				opp_points
+				outcome""")
+				
+
+		self.TableColumns.pack(side='top')
+		self.TableColumns2.pack(side='right')
+
+		
 	def pickTable(self):
 
 		#if using old table
@@ -387,14 +411,15 @@ class MyGUI:
 		self.radio_varTABLE = tkinter.IntVar()
 		self.radio_varTABLE.set(1)
 
-		PlayerRadio= tkinter.Radiobutton(self.top_frameL, text='Player',variable=self.radio_varTABLE, value=1,borderwidth=1)
-		DataRadio= tkinter.Radiobutton(self.top_frameL, text='Data',variable=self.radio_varTABLE, value=2,borderwidth=1)
-		GamesRadio= tkinter.Radiobutton(self.top_frameL, text='Games',variable=self.radio_varTABLE, value=3,borderwidth=1)
+		self.PlayerRadio= tkinter.Radiobutton(self.top_frameL, text='Player',variable=self.radio_varTABLE, value=1,borderwidth=1, command=self.DescribeTable)
+		self.DataRadio= tkinter.Radiobutton(self.top_frameL, text='Data',variable=self.radio_varTABLE, value=2,borderwidth=1,command=self.DescribeTable)
+		self.GamesRadio= tkinter.Radiobutton(self.top_frameL, text='Games',variable=self.radio_varTABLE, value=3,borderwidth=1,command=self.DescribeTable)
 
 		#pack radio buttons
-		PlayerRadio.pack()
-		DataRadio.pack()
-		GamesRadio.pack()
+		self.PlayerRadio.pack(side='left')
+		self.DataRadio.pack(side='left')
+		self.GamesRadio.pack(side='left')
+
 
 
 		#Create button widgets in bottom frame
@@ -406,7 +431,7 @@ class MyGUI:
 
 		#repack frames
 		self.top_frameL.pack(side='left')
-		#self.top_frameR.pack(side='right')
+		self.top_frameR.pack(side='right')
 		self.bottom_frame.pack(side='left')
 
 
