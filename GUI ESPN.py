@@ -11,7 +11,7 @@ import time
 
 #insert MySQL login info
 username= 'root'
-password= '*******
+password= '*******'
 
 conn = pymysql.connect(host='localhost', port=3306, user=username, passwd=password, db='NBA')
 Cursor = conn.cursor()
@@ -22,6 +22,7 @@ numGames = 0
 data_id = 1 #primary key for data table
 game_id = 0	#prymary key for games table
 game_id2 = 1
+choice = 0 #to check if its going back or not
 
 last_teamFile= open('team.txt', 'r')
 last_team = last_teamFile.read()
@@ -33,34 +34,45 @@ preseason =["Sat 10/1","Sun 10/2","Mon 10/3","Tue 10/4","Wed 10/5","Thu 10/6","F
 #What team to scrape
 teams = ['ATL', 'BKN', 'BOS', 'CHA', 'CHI', 'CLE', 'DAL', 'DEN', 'DET', 'GS', 'HOU', 'IND', 'LAC', 'LAL', 'MEM', 'MIA', 'MIL', 'MIN', 'NO', 'NY', 'OKC','ORL', 'PHI', 'PHX', 'POR', 'SA', 'SAC', 'TOR', 'UTAH', 'WSH']
 
-			
-
-
+playerColumns=['id_pk', 'first', 'last','position','number','age','height','weight','salary']
+dataColumns=['id_pk', 'game_fk', 'player_fk', 'minutes', 'fg_made', 'fg_attempted', 'three_made', 'three_attempted', 'free_made', 'free_attempted', 'rebounds', 'assists', 'blocks', 'steals', 'fouls', 'turnovers', 'points']
+gamesColumns=['game_pk', 'opponent_fk', 'date', 'final_score', 'opp_points', 'outcome']
 
 class MyGUI:
 	def __init__(self):
-		
-
 		#create the main window widget
 		self.main_window = tkinter.Tk()
 		self.main_window.geometry("500x500")
 
+		self.LastTeam()
+
+		#Enter the tkinter main loop
+		tkinter.mainloop()
+
+	def LastTeam(self):
+		try:
+			# remove from screen:
+			self.top_frameL.destroy()
+			self.top_frameR.destroy()
+			self.bottom_frame.destroy()
+		except AttributeError:
+			pass
+
 		#Create two frames, one for the top of the window and one for the bottom
-		self.top_frameL = tkinter.Frame(self.main_window)
+		self.top_frameL = tkinter.Frame(self.main_window, borderwidth=5)
 		self.top_frameR = tkinter.Frame(self.main_window)
 		self.bottom_frame = tkinter.Frame(self.main_window)
 
 		#Create a label widget containing the last team scrapped in the top frame
-		self.LastTeamLabel = tkinter.Label(self.top_frameL, text='Last team scraped was: '+last_team)
+		self.LastTeamLabel = tkinter.Label(self.top_frameL, text='Last team scraped was: '+last_team, fg="red", borderwidth=10)
 		self.ScrapeQuestion= tkinter.Label(self.top_frameL, text='Do you want to scrape a different team?')
-		
 
 		#pack the frames
 		self.LastTeamLabel.pack(side='top')
 		self.ScrapeQuestion.pack(side='top')
 
 
-		self.NoButton = tkinter.Button(self.bottom_frame, text='No', command=self.pickTable)
+		self.NoButton = tkinter.Button(self.bottom_frame, text='No', command=lambda: self.pickTable(0))
 		self.YesButton = tkinter.Button(self.bottom_frame, text='Yes', command=self.dbase_init)
 		
 		self.NoButton.pack(side='left')
@@ -70,29 +82,18 @@ class MyGUI:
 		self.top_frameL.pack()
 		self.bottom_frame.pack()
 
-		#Enter the tkinter main loop
-		tkinter.mainloop()
+
 
 	def dbase_init(self):
 		print('dbase_init')
 	
 		assert(len(teams)!=0)
 		
-		Cursor.execute("DROP TABLE IF EXISTS Data")
-		Cursor.execute("create table Data (id_pk INT not null, game_fk INT, player_fk INT, minutes INT, fg_made INT, fg_attempted INT, three_made INT, three_attempted INT, free_made INT, free_attempted INT, rebounds INT, assists INT, blocks INT, steals INT, fouls INT, turnovers INT, points INT, PRIMARY KEY (id_pk))")
-		
-		Cursor.execute("DROP TABLE IF EXISTS Player")
-		Cursor.execute("create table Player (id_pk INT not null, first varchar(25), last varchar(25), position varchar(2), number INT, age INT, height_ft INT, height_in INT, weight INT, salary INT, PRIMARY KEY (id_pk))")
-
-		Cursor.execute("DROP TABLE IF EXISTS Games")
-		Cursor.execute("create table Games ( game_pk INT not null AUTO_INCREMENT, opponent_fk varchar(25), date DATE, final_score INT, opp_points INT, outcome ENUM('W', 'L'), PRIMARY KEY (game_pk))")
-
-
-		#Destroy all previous widgets
-		self.LastTeamLabel.destroy()
-		self.ScrapeQuestion.destroy()
-		self.NoButton.destroy()
-		self.YesButton.destroy()
+		#Forget all previous widgets
+		self.LastTeamLabel.pack_forget()
+		self.ScrapeQuestion.pack_forget()
+		self.NoButton.pack_forget()
+		self.YesButton.pack_forget()
 
 		#display all teams
 		#create radiobutton widgets in the top frame
@@ -107,20 +108,25 @@ class MyGUI:
 
 		#Create button widgets in bottom frame
 		self.QuitButton = tkinter.Button(self.bottom_frame, text='Quit', command=self.main_window.destroy)
-		self.NextButton = tkinter.Button(self.bottom_frame, text='Next', command=self.BeforeScrape)
+		self.BackButtonLastTeam = tkinter.Button(self.bottom_frame, text='Back', command=self.LastTeam)
+		self.NextButtonBeforeScrape = tkinter.Button(self.bottom_frame, text='Next', command=self.BeforeScrape)
 
 		self.QuitButton.pack()
-		self.NextButton.pack()
-
+		self.BackButtonLastTeam.pack()
+		self.NextButtonBeforeScrape.pack()
+	
 		#repack frames
 		self.top_frameL.pack(side='left')
 		self.top_frameR.pack(side='right')
 		self.bottom_frame.pack(side='right')
-
+	
 
 	def query_interface(self):
+		global playerColumnsWidget
+		global dataColumnsWidget
+		global gamesColumnsWidget
 
-		#destroy describetable widgets
+		#destroy describe table widgets
 		try:
 			self.TableColumns.destroy()
 			self.TableColumns2.destroy()
@@ -131,27 +137,32 @@ class MyGUI:
 		self.PlayerRadio.destroy()
 		self.DataRadio.destroy()
 		self.GamesRadio.destroy()
-		self.NextButton.destroy()
-
+		self.NextButtonPickTable.destroy()
 
 		#returns radio_vars IntVar data as an int
 		tableChoice = self.radio_varTABLE.get()
 		assert(type(tableChoice) == int)
-		print(tableChoice)
 
+		#create next button
+		self.BackButtonColumns = tkinter.Button(self.bottom_frame, text='Back', command=lambda: self.pickTable(tableChoice))
+		self.NextButtonColumns = tkinter.Button(self.bottom_frame, text='Next', command=lambda: self.Query(playerColumnsVAR,playerColumns))
+		
+		#pack the widgets
+		self.BackButtonColumns.pack()
+		self.NextButtonColumns.pack()
+		
 		select=''
 		table='' 
 		whre='' 
 		groupAns=''
 	
 		if (tableChoice== 1):
+			table = 'player'
 			#columns in player table
-			playerColumns=['id_pk', 'first', 'last','position','number','age','height','weight','salary']
 			playerColumnsVAR=[0]*len(playerColumns)
 			playerColumnsWidget=[0]*len(playerColumns)
 
 			for playerIndex in range(len(playerColumns)):
-				print(playerColumns[playerIndex])
 				#Create IntVar objects for each column
 				playerColumnsVAR[playerIndex]= tkinter.IntVar()
 
@@ -159,107 +170,69 @@ class MyGUI:
 				playerColumnsVAR[playerIndex].set(0)
 
 				#Create the checkbutton widgets
-				playerColumnsWidget[playerIndex] = tkinter.Checkbutton(self.top_frameL, text = playerColumns[playerIndex], variable =playerColumns[playerIndex])
+				playerColumnsWidget[playerIndex] = tkinter.Checkbutton(self.top_frameL, text = playerColumns[playerIndex], variable =playerColumnsVAR[playerIndex])
 
 				playerColumnsWidget[playerIndex].pack()
 			self.top_frameL.pack()
-
-
-
 			
-
-			print(table.capitalize(),"table has: ")
-			#print columns in player table
-			for col in range(len(playerColumns)):
-				print(str(col+1)+'. ',playerColumns[col])
-			
-			keep_going=True
-			while keep_going:
-				Col_choice = input("Enter columns to query using commas to separate each: ")
-				col_list = Col_choice.split(',')
-				keep_going=False
-
-				#check that all inputs are valid
-				for check in col_list:
-					if (int(check) <= 0) or (int(check) > len(playerColumns)):
-						print("Sorry", check, "is not a valid column")
-						keep_going=True
-
-
-			
-			for ch in col_list:
-				select2.append(playerColumns[int(ch)-1])
-
-			select = select.join(select2)	
-			print()
-			print(select)
-			c = False
-
-
+					
 		elif (tableChoice== 2):
+			table = 'data'
 			#columns in data table
-			dataColumns=['id_pk', 'game_fk', 'player_fk', 'minutes', 'fg_made', 'fg_attempted', 'three_made', 'three_attempted', 'free_made', 'free_attempted', 'rebounds', 'assists', 'blocks', 'steals', 'fouls', 'turnovers', 'points']
+			dataColumnsVAR=[0]*len(dataColumns)
+			dataColumnsWidget=[0]*len(dataColumns)
 
-			print(table.capitalize(),"table has: ")
-			#print columns in data table
-			for col in range(len(dataColumns)):
-				print(str(col+1)+'. ',dataColumns[col])
-			
+			for dataIndex in range(len(dataColumns)):
+				#Create IntVar objects for each column
+				dataColumnsVAR[dataIndex]= tkinter.IntVar()
 
-			keep_going=True
-			while keep_going:
-				Col_choice = input("Enter columns to query using commas to separate each: ")
-				col_list = Col_choice.split(',')
-				keep_going=False
+				#set the intvar objects to 0
+				dataColumnsVAR[dataIndex].set(0)
 
-				#check that all inputs are valid
-				for check in col_list:
-					if (int(check) <= 0) or (int(check) > len(dataColumns)):
-						print("Sorry", check, "is not a valid column")
-						keep_going=True
-			
-			for ch in col_list:
-				select2.append(dataColumns[int(ch)-1])
+				#Create the checkbutton widgets
+				dataColumnsWidget[dataIndex] = tkinter.Checkbutton(self.top_frameL, text = dataColumns[dataIndex], variable =dataColumnsVAR[dataIndex])
 
-			select = select.join(select2)	
-			print()
-			print(select)
-			c = False
-
-
+				dataColumnsWidget[dataIndex].pack()
+			self.top_frameL.pack()
 
 		elif (tableChoice == 3):
+			table = 'games'
 			#columns in games table
-			gamesColumns=['game_pk', 'opponent_fk', 'date', 'final_score', 'opp_points', 'outcome']
-			print(table.capitalize(),"table has: ")
-			#print columns in games table
-			for col in range(len(gamesColumns)):
-				print(str(col+1)+'. ',gamesColumns[col])
 			
-			keep_going=True
-			while keep_going:
-				Col_choice = input("Enter columns to query using commas to separate each: ")
-				col_list = Col_choice.split(',')
-				keep_going=False
+			gamesColumnsVAR=[0]*len(gamesColumns)
+			gamesColumnsWidget=[0]*len(gamesColumns)
 
-				#check that all inputs are valid
-				for check in col_list:
-					if (int(check) <= 0) or (int(check) > len(gamesColumns)):
-						print("Sorry", check, "is not a valid column")
-						keep_going=True
-			
-			for ch in col_list:
-				select2.append(gamesColumns[int(ch)-1])
+			for gamesIndex in range(len(gamesColumns)):
+				#Create IntVar objects for each column
+				gamesColumnsVAR[gamesIndex]= tkinter.IntVar()
 
-			select = select.join(select2)	
-			print()
-			print(select)
-			c = False
-		
+				#set the intvar objects to 0
+				gamesColumnsVAR[gamesIndex].set(0)
+
+				#Create the checkbutton widgets
+				gamesColumnsWidget[gamesIndex] = tkinter.Checkbutton(self.top_frameL, text = gamesColumns[gamesIndex], variable =gamesColumnsVAR[gamesIndex])
+
+				gamesColumnsWidget[gamesIndex].pack()
+			self.top_frameL.pack()			
+
 		print()
 		# user input WHERE clause
 		#whereQ = input("Want to use filter out data(yes/no) ")
 		print()
+		
+
+	def Query(self,ColumnsVAR,Columns):
+		#initialize select variables
+		select=','
+		select2=[]
+
+		for x in range(len(ColumnsVAR)):
+			if ColumnsVAR[x].get()==1:
+				select2.append(Columns[x])
+
+		select = select.join(select2)
+		print(select)
+
 		"""
 		if whereQ.lower() == "yes":
 			print("What conditions would you like to add(ex first = 'jimmy', age >= 20)?")
@@ -390,24 +363,42 @@ class MyGUI:
 		self.TableColumns2.pack(side='right')
 
 		
-	def pickTable(self):
+	def pickTable(self, choice):
+		global playerColumnsWidget
+		global dataColumnsWidget
+		global gamesColumnsWidget
 
 		#if using old table
 		try:
 			#Destroy all Init widgets
-			self.LastTeamLabel.destroy()
-			self.ScrapeQuestion.destroy()
-			self.NoButton.destroy()
-			self.YesButton.destroy()
+			self.LastTeamLabel.pack_forget()
+			self.ScrapeQuestion.pack_forget()
+			self.NoButton.pack_forget()
+			self.YesButton.pack_forget()
+
+			#if coming back
+			if choice ==1:
+				for playerIndex in range(len(playerColumns)):
+					playerColumnsWidget[playerIndex].destroy()
+
+			elif choice ==2:
+				for dataIndex in range(len(dataColumns)):
+					dataColumnsWidget[dataIndex].destroy()
+
+			elif choice ==3:
+				for gamesIndex in range(len(gamesColumns)):
+					gamesColumnsWidget[gamesIndex].destroy()
+
+			self.QuitButton.destroy()
+			self.BackButtonColumns.destroy()
+			self.NextButtonColumns.destroy()
+			#self.top_frameL = tkinter.Frame(self.main_window, borderwidth=5)
+#########
 		except AttributeError:
 			print('messed up')
-			
-		else:
-			#Destroy scrape widgets
-			pass
-			
+				
 		
-		#Create New Widgets is Which table to query?
+		#Create New Widgets is which table to query?
 		self.radio_varTABLE = tkinter.IntVar()
 		self.radio_varTABLE.set(1)
 
@@ -424,10 +415,10 @@ class MyGUI:
 
 		#Create button widgets in bottom frame
 		self.QuitButton = tkinter.Button(self.bottom_frame, text='Quit', command=self.main_window.destroy)
-		self.NextButton = tkinter.Button(self.bottom_frame, text='Next', command=self.query_interface)
+		self.NextButtonPickTable = tkinter.Button(self.bottom_frame, text='Next', command=self.query_interface)
 
 		self.QuitButton.pack()
-		self.NextButton.pack()
+		self.NextButtonPickTable.pack()
 
 		#repack frames
 		self.top_frameL.pack(side='left')
@@ -612,9 +603,21 @@ class MyGUI:
 		self.progress.stop()
 		#Destroy all previous widgets
 		self.progress.destroy()
+		self.QuitButton.destroy()
+		self.progressMessage.destroy()
 		self.pickTable()
 
 	def BeforeScrape(self):
+		Cursor.execute("DROP TABLE IF EXISTS Data")
+		Cursor.execute("create table Data (id_pk INT not null, game_fk INT, player_fk INT, minutes INT, fg_made INT, fg_attempted INT, three_made INT, three_attempted INT, free_made INT, free_attempted INT, rebounds INT, assists INT, blocks INT, steals INT, fouls INT, turnovers INT, points INT, PRIMARY KEY (id_pk))")
+		
+		Cursor.execute("DROP TABLE IF EXISTS Player")
+		Cursor.execute("create table Player (id_pk INT not null, first varchar(25), last varchar(25), position varchar(2), number INT, age INT, height_ft INT, height_in INT, weight INT, salary INT, PRIMARY KEY (id_pk))")
+
+		Cursor.execute("DROP TABLE IF EXISTS Games")
+		Cursor.execute("create table Games ( game_pk INT not null AUTO_INCREMENT, opponent_fk varchar(25), date DATE, final_score INT, opp_points INT, outcome ENUM('W', 'L'), PRIMARY KEY (game_pk))")
+
+
 		#Destroy all previous widgets
 		self.top_frameL.destroy()
 		self.top_frameR.destroy()
@@ -623,14 +626,16 @@ class MyGUI:
 		self.top_frameR = tkinter.Frame(self.main_window)
 
 		#grid.destroy()
-		self.QuitButton.destroy()
-		self.NextButton.destroy()
+		self.BackButtonLastTeam.pack_forget()
+		self.NextButtonBeforeScrape.pack_forget()
 
 		#create new widgets
 		self.progress = ttk.Progressbar(self.top_frameL, orient='horizontal', mode='indeterminate')
-
+		self.progressMessage = tkinter.Label(self.top_frameL, text='Scrape should take approximately 1 min')
+				
 		#pack the widget
 		self.progress.pack(expand=True, fill=tkinter.BOTH, side=tkinter.TOP)
+		self.progressMessage.pack()
 
 		#pack the frame
 		self.top_frameL.pack()
